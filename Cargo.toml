@@ -16,3 +16,7 @@ webdriver-downloader = { version = "0.14.3", default-features = false, features 
 
 [build-dependencies]
 tauri-plugin = { version = "2.0.0-beta.4", features = ["build"] }
+
+[target.'cfg(windows)'.dependencies]
+reqwest = { version = "0.11.24", default-features = false, features = ["native-tls"] }
+zip = { version = "0.6.6", default-features = false }

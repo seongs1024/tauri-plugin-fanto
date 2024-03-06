@@ -10,8 +10,8 @@ pub enum Error {
   #[error(transparent)]
   PluginInvoke(#[from] tauri::plugin::mobile::PluginInvokeError),
 
-  #[error("Webdriver is already installed in `{0}`")]
-  WebdriverAlreadyExists(std::path::PathBuf),
+  #[error(transparent)]
+  Tauri(#[from] tauri::Error),
 
   #[cfg(target_os = "macos")]
   #[error(transparent)]

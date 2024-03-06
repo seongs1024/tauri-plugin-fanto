@@ -1,5 +1,5 @@
 use serde::de::DeserializeOwned;
-use tauri::{plugin::PluginApi, AppHandle, Runtime};
+use tauri::{plugin::PluginApi, AppHandle, Runtime, Manager};
 
 use crate::models::*;
 
@@ -11,10 +11,10 @@ pub fn init<R: Runtime, C: DeserializeOwned>(
 ) -> crate::Result<Fanto<R>> {
 
   let app_clone = app.clone();
-  tauri::async_runtime::block_on(async move {
-    driver_downloader::dowload_webdriver(&app_clone).await?;
-  });
-  
+  let driver_path = tauri::async_runtime::block_on(async move {
+    dowload_webdriver(&app_clone).await
+  })?;
+
   Ok(Fanto(app.clone()))
 }
 
@@ -29,7 +29,7 @@ impl<R: Runtime> Fanto<R> {
   }
 }
 
-async fn dowload_webdriver(app: &tauri::AppHandle) -> Result<()> {
+async fn dowload_webdriver<R: Runtime>(app: &AppHandle<R>) -> Result<std::path::PathBuf> {
     let tauri_dir = app.path().app_local_data_dir()?;
     if !tauri_dir.is_dir() {
         std::fs::create_dir(&tauri_dir)?;
@@ -40,7 +40,7 @@ async fn dowload_webdriver(app: &tauri::AppHandle) -> Result<()> {
     #[cfg(target_os = "windows")]
     let driver_path = tauri_dir.join("msedgedriver.exe");
     if driver_path.is_file() {
-        return Err(Error::WebdriverAlreadyExists(driver_path));
+        return Ok(driver_path)
     }
 
     #[cfg(target_os = "macos")]
@@ -48,7 +48,7 @@ async fn dowload_webdriver(app: &tauri::AppHandle) -> Result<()> {
     #[cfg(target_os = "windows")]
     dowload_msedgedriver(&driver_path).await?;
 
-    Ok(())
+    Ok(driver_path)
 }
 
 #[cfg(target_os = "macos")]
@@ -72,8 +72,6 @@ async fn dowload_chromedriver(driver_path: &std::path::PathBuf) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 async fn dowload_msedgedriver(driver_path: &std::path::PathBuf) -> Result<()> {
-    use std::io::{Read, Write};
-
     let msedge_version = msedgedriver_version()?;
     let url = format!(
         "https://msedgedriver.azureedge.net/{}/edgedriver_win64.zip",
@@ -93,7 +91,7 @@ async fn dowload_msedgedriver(driver_path: &std::path::PathBuf) -> Result<()> {
         let mut file = zip.by_index(i)?;
         if file.name() == "msedgedriver.exe" {
             let mut f = std::fs::File::create(driver_path)?;
-            std::io::copy(&mut file, &mut f);
+            std::io::copy(&mut file, &mut f)?;
             break;
         }
     }
