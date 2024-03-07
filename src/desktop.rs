@@ -11,6 +11,9 @@ use std::{
     sync::Mutex,
 };
 
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
+
 /// Access to the fanto APIs.
 #[allow(dead_code)]
 pub struct Fanto<R: Runtime> {
@@ -37,11 +40,23 @@ impl<R: Runtime> Fanto<R> {
 
         let mut port = 4444;
         let process = loop {
+            #[cfg(not(target_os = "windows"))]
             let mut process = Command::new(&driver_path)
                 .args([format!("--port={}", port)])
-				.stdin(Stdio::null())
-				.stdout(Stdio::null())
-				.stderr(Stdio::null())
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn()?;
+
+            //const CREATE_NO_WINDOW: u32 = 0x08000000;
+            //const DETACHED_PROCESS: u32 = 0x00000008;
+            #[cfg(target_os = "windows")]
+            let mut process = Command::new(&driver_path)
+                .args([format!("--port={}", port)])
+                .stdin(Stdio::null())
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .creation_flags(0x00000008)
                 .spawn()?;
 
             let status = process.try_wait()?;
