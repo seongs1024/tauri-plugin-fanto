@@ -20,7 +20,7 @@ pub struct Fanto<R: Runtime> {
     app: AppHandle<R>,
     driver_path: PathBuf,
     process: Mutex<Child>,
-    port: u32,
+    port: u16,
 }
 
 impl<R: Runtime> Fanto<R> {
@@ -40,6 +40,14 @@ impl<R: Runtime> Fanto<R> {
 
         let mut port = 4444;
         let process = loop {
+            match std::net::TcpListener::bind(("localhost", port)) {
+                Ok(_) => {}
+                Err(_) => {
+                    port += 1;
+                    continue;
+                }
+            };
+
             #[cfg(not(target_os = "windows"))]
             let mut process = Command::new(&driver_path)
                 .args([format!("--port={}", port)])
@@ -59,6 +67,7 @@ impl<R: Runtime> Fanto<R> {
                 .creation_flags(0x00000008)
                 .spawn()?;
 
+            println!("webdriver process's ID is {}", process.id());
             let status = process.try_wait()?;
             if status.is_none() {
                 break process;
