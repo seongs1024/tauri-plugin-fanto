@@ -7,7 +7,7 @@ use crate::error::{Error, Result};
 
 use std::{
     path::PathBuf,
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     sync::Mutex,
 };
 
@@ -39,6 +39,9 @@ impl<R: Runtime> Fanto<R> {
         let process = loop {
             let mut process = Command::new(&driver_path)
                 .args([format!("--port={}", port)])
+				.stdin(Stdio::null())
+				.stdout(Stdio::null())
+				.stderr(Stdio::null())
                 .spawn()?;
 
             let status = process.try_wait()?;
