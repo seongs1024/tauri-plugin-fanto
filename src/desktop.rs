@@ -57,14 +57,13 @@ impl<R: Runtime> Fanto<R> {
                 .spawn()?;
 
             //const CREATE_NO_WINDOW: u32 = 0x08000000;
-            //const DETACHED_PROCESS: u32 = 0x00000008;
             #[cfg(target_os = "windows")]
             let mut process = Command::new(&driver_path)
                 .args([format!("--port={}", port)])
                 .stdin(Stdio::null())
                 .stdout(Stdio::null())
                 .stderr(Stdio::null())
-                .creation_flags(0x00000008)
+                .creation_flags(0x08000000)
                 .spawn()?;
 
             println!("webdriver process's ID is {}", process.id());
