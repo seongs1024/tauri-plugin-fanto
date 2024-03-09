@@ -1,8 +1,8 @@
 [package]
 name = "tauri-plugin-fanto"
 version = "0.1.0"
-authors = [ "You" ]
-description = ""
+authors = [ "seongs1024" ]
+description = "tauri plugin fantoccini integrated with webdriver-downloader"
 edition = "2021"
 rust-version = "1.70"
 exclude = ["/examples", "/webview-dist", "/webview-src", "/node_modules"]
