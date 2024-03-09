@@ -13,6 +13,9 @@ pub enum Error {
     #[error(transparent)]
     Tauri(#[from] tauri::Error),
 
+    #[error(transparent)]
+    FantoccniNewSessionError(#[from] fantoccini::error::NewSessionError),
+
     #[cfg(target_os = "macos")]
     #[error(transparent)]
     WebdriverDownloadError(#[from] webdriver_downloader::prelude::WebdriverDownloadError),

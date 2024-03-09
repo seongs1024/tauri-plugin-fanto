@@ -3,18 +3,12 @@ use tauri::{
     Manager, RunEvent, Runtime,
 };
 
-use std::{collections::HashMap, sync::Mutex};
-
-pub use models::*;
-
 #[cfg(desktop)]
 mod desktop;
 #[cfg(mobile)]
 mod mobile;
 
-mod commands;
 mod error;
-mod models;
 
 pub use error::{Error, Result};
 
@@ -22,9 +16,6 @@ pub use error::{Error, Result};
 use desktop::Fanto;
 #[cfg(mobile)]
 use mobile::Fanto;
-
-#[derive(Default)]
-struct MyState(Mutex<HashMap<String, String>>);
 
 /// Extensions to [`tauri::App`], [`tauri::AppHandle`] and [`tauri::Window`] to access the fanto APIs.
 pub trait FantoExt<R: Runtime> {
@@ -40,15 +31,12 @@ impl<R: Runtime, T: Manager<R>> crate::FantoExt<R> for T {
 /// Initializes the plugin.
 pub fn init<R: Runtime>() -> TauriPlugin<R> {
     Builder::new("fanto")
-        .invoke_handler(tauri::generate_handler![commands::execute])
         .setup(|app, api| {
             #[cfg(mobile)]
             let fanto = mobile::init(app, api)?;
             #[cfg(desktop)]
             let fanto = desktop::Fanto::init(app, api)?;
             app.manage(fanto);
-
-            app.manage(MyState::default());
             Ok(())
         })
         .on_event(|app, event| {

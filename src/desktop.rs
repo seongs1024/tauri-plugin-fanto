@@ -1,8 +1,6 @@
 use serde::de::DeserializeOwned;
 use tauri::{plugin::PluginApi, AppHandle, Manager, Runtime};
 
-use crate::models::*;
-
 use crate::error::{Error, Result};
 
 use std::{
@@ -10,6 +8,8 @@ use std::{
     process::{Child, Command, Stdio},
     sync::Mutex,
 };
+
+use fantoccini::{wd::TimeoutConfiguration, Client, ClientBuilder};
 
 #[cfg(target_os = "windows")]
 use std::os::windows::process::CommandExt;
@@ -21,13 +21,12 @@ pub struct Fanto<R: Runtime> {
     driver_path: PathBuf,
     process: Mutex<Child>,
     port: u16,
+    driver: Client,
 }
 
 impl<R: Runtime> Fanto<R> {
-    pub fn ping(&self, payload: PingRequest) -> crate::Result<PingResponse> {
-        Ok(PingResponse {
-            value: payload.value,
-        })
+    pub fn driver(&self) -> &Client {
+        &self.driver
     }
 
     pub fn init<C: DeserializeOwned>(
@@ -74,11 +73,14 @@ impl<R: Runtime> Fanto<R> {
             port += 1;
         };
 
+        let driver = tauri::async_runtime::block_on(async move { driver(port).await })?;
+
         Ok(Fanto {
             app: app.clone(),
             driver_path,
             process: Mutex::new(process),
             port,
+            driver,
         })
     }
 
@@ -177,4 +179,63 @@ fn msedgedriver_version() -> Result<String> {
         .take(1)
         .next()
         .ok_or(Error::MsEdgeVersionNotFound)
+}
+
+async fn driver(port: u16) -> Result<Client> {
+    #[cfg(target_os = "macos")]
+    let driver = chrome_client(port).await?;
+    #[cfg(target_os = "windows")]
+    let driver = edge_client(port).await?;
+
+    let _ = driver
+        .set_ua("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        .await;
+    let _ = driver
+        .update_timeouts(TimeoutConfiguration::new(
+            Some(std::time::Duration::from_secs(60)),
+            Some(std::time::Duration::from_secs(60)),
+            Some(std::time::Duration::from_secs(15)),
+        ))
+        .await;
+    Ok(driver)
+}
+
+#[cfg(target_os = "macos")]
+async fn chrome_client(port: u16) -> Result<Client> {
+    Ok(ClientBuilder::native()
+        .capabilities(
+            [(
+                String::from("goog:chromeOptions"),
+                serde_json::json!({
+                    "args": [
+                        "--headless",
+                        "--incognito",
+                    ],
+                }),
+            )]
+            .into_iter()
+            .collect(),
+        )
+        .connect(&format!("http://localhost:{}", port))
+        .await?)
+}
+
+#[cfg(target_os = "windows")]
+async fn edge_client(port: u16) -> Result<Client> {
+    Ok(ClientBuilder::native()
+        .capabilities(
+            [(
+                String::from("ms:edgeOptions"),
+                serde_json::json!({
+                    "args": [
+                        // "--headless",
+                        "-inprivate",
+                    ],
+                }),
+            )]
+            .into_iter()
+            .collect(),
+        )
+        .connect(&format!("http://localhost:{}", port))
+        .await?)
 }
