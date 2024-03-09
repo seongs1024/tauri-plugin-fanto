@@ -12,6 +12,8 @@ mod error;
 
 pub use error::{Error, Result};
 
+pub use fantoccini;
+
 #[cfg(desktop)]
 use desktop::Fanto;
 #[cfg(mobile)]
