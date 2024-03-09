@@ -16,7 +16,7 @@ tauri-plugin-fanto = "0.1.0"
 
 `src-tauri/src/main.rs`
 
-```rs
+```rust
 use tauri_plugin_fanto::{
     FantoExt,
     fantoccini::{
@@ -44,4 +44,5 @@ fn main() {
         .invoke_handler(tauri::generate_handler![greet])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
-}```
+}
+```

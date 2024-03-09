@@ -8,7 +8,9 @@ rust-version = "1.70"
 exclude = ["/examples", "/webview-dist", "/webview-src", "/node_modules"]
 links = "tauri-plugin-fanto"
 license = "MIT OR Apache-2.0"
-keywords = ["tauri", "plugin", "fantoccini", "webdriver-downloader", "selenium", "automation"]
+keywords = ["tauri", "plugin", "fantoccini", "webdriver-downloader", "selenium"]
+repository = "https://github.com/seongs1024/tauri-plugin-fanto"
+documentation = "https://docs.rs/tauri-plugin-fanto/latest/tauri_plugin_fanto/"
 
 [dependencies]
 tauri = { version = "2.0.0-beta.6" }
