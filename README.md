@@ -9,7 +9,7 @@
 
 ```toml
 [dependencies]
-tauri-plugin-fanto = "0.1.0"
+tauri-plugin-fanto = "0.1.1"
 ```
 
 ## Usage
@@ -17,16 +17,18 @@ tauri-plugin-fanto = "0.1.0"
 `src-tauri/src/main.rs`
 
 ```rust
+use tauri::AppHandle;
 use tauri_plugin_fanto::{
     FantoExt,
     fantoccini::{
         Locator,
         key::Key,
     },
+    Error,
 };
 
 #[tauri::command]
-async fn greet(app: tauri::AppHandle) -> Result<(), tauri_plugin_fanto::Error> {
+async fn greet(app: tauri::AppHandle) -> Result<(), Error> {
     let fanto = app.fanto();
 
     let driver = fanto.driver().await?;

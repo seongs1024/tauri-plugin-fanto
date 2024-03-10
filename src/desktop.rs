@@ -125,9 +125,12 @@ async fn dowload_webdriver<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf> {
 
 #[cfg(target_os = "macos")]
 async fn dowload_chromedriver(driver_path: &PathBuf) -> Result<()> {
+    use webdriver_downloader::driver_impls::chromedriver_for_testing_info::ChromedriverForTestingInfo;
     use webdriver_downloader::prelude::*;
 
-    let mut driver_info = ChromedriverOldInfo::new_default()?;
+    let mut old_driver_info = ChromedriverOldInfo::new_default()?;
+    let mut driver_info = ChromedriverForTestingInfo::new_default()?;
+    driver_info.browser_path = old_driver_info.browser_path;
 
     if !driver_info.browser_path.is_file() {
         return Err(Error::BrowserNotFound(driver_info.browser_path));
@@ -200,7 +203,7 @@ async fn chrome_client(port: u16) -> Result<Client> {
                 String::from("goog:chromeOptions"),
                 serde_json::json!({
                     "args": [
-                        "--headless",
+                        // "--headless",
                         "--incognito",
                     ],
                 }),
