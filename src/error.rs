@@ -15,6 +15,8 @@ pub enum Error {
 
     #[error(transparent)]
     FantoccniNewSessionError(#[from] fantoccini::error::NewSessionError),
+    #[error(transparent)]
+    FantoccniCmdError(#[from] fantoccini::error::CmdError),
 
     #[cfg(target_os = "macos")]
     #[error(transparent)]

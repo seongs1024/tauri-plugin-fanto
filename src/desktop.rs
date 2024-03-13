@@ -18,6 +18,7 @@ use std::os::windows::process::CommandExt;
 #[allow(dead_code)]
 pub struct Fanto<R: Runtime> {
     app: AppHandle<R>,
+    app_local_data_dir: PathBuf,
     driver_path: PathBuf,
     process: Mutex<Child>,
     port: u16,
@@ -28,9 +29,13 @@ impl<R: Runtime> Fanto<R> {
         app: &AppHandle<R>,
         _api: PluginApi<R, C>,
     ) -> crate::Result<Fanto<R>> {
-        let app_clone = app.clone();
+        let app_local_data_dir = app.path().app_local_data_dir()?;
+        if !app_local_data_dir.is_dir() {
+            std::fs::create_dir(&app_local_data_dir)?;
+        }
+
         let driver_path =
-            tauri::async_runtime::block_on(async move { dowload_webdriver(&app_clone).await })?;
+            tauri::async_runtime::block_on(async { dowload_webdriver(&app_local_data_dir).await })?;
 
         let mut port = 4444;
         let process = loop {
@@ -70,6 +75,7 @@ impl<R: Runtime> Fanto<R> {
 
         Ok(Fanto {
             app: app.clone(),
+            app_local_data_dir,
             driver_path,
             process: Mutex::new(process),
             port,
@@ -83,9 +89,9 @@ impl<R: Runtime> Fanto<R> {
 
     pub async fn driver(&self) -> Result<Client> {
         #[cfg(target_os = "macos")]
-        let driver = chrome_client(self.port).await?;
+        let driver = chrome_client(self.port, &self.app_local_data_dir).await?;
         #[cfg(target_os = "windows")]
-        let driver = edge_client(self.port).await?;
+        let driver = edge_client(self.port, &self.app_local_data_dir).await?;
 
         let _ = driver
             .set_ua("Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
@@ -101,12 +107,7 @@ impl<R: Runtime> Fanto<R> {
     }
 }
 
-async fn dowload_webdriver<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf> {
-    let tauri_dir = app.path().app_local_data_dir()?;
-    if !tauri_dir.is_dir() {
-        std::fs::create_dir(&tauri_dir)?;
-    }
-
+async fn dowload_webdriver(tauri_dir: &PathBuf) -> Result<PathBuf> {
     #[cfg(target_os = "macos")]
     let driver_path = tauri_dir.join("chromedriver");
     #[cfg(target_os = "windows")]
@@ -196,7 +197,7 @@ fn msedgedriver_version() -> Result<String> {
 }
 
 #[cfg(target_os = "macos")]
-async fn chrome_client(port: u16) -> Result<Client> {
+async fn chrome_client(port: u16, tauri_path: &PathBuf) -> Result<Client> {
     Ok(ClientBuilder::native()
         .capabilities(
             [(
@@ -205,6 +206,7 @@ async fn chrome_client(port: u16) -> Result<Client> {
                     "args": [
                         // "--headless",
                         "--incognito",
+                        &format!("--user-data-dir={}\\driver-user-data", tauri_path.display()),
                     ],
                 }),
             )]
@@ -216,7 +218,7 @@ async fn chrome_client(port: u16) -> Result<Client> {
 }
 
 #[cfg(target_os = "windows")]
-async fn edge_client(port: u16) -> Result<Client> {
+async fn edge_client(port: u16, tauri_path: &PathBuf) -> Result<Client> {
     Ok(ClientBuilder::native()
         .capabilities(
             [(
@@ -225,6 +227,7 @@ async fn edge_client(port: u16) -> Result<Client> {
                     "args": [
                         // "--headless",
                         "-inprivate",
+                        &format!("--user-data-dir={}\\driver-user-data", tauri_path.display()),
                     ],
                 }),
             )]
