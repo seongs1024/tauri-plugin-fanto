@@ -206,7 +206,7 @@ async fn chrome_client(port: u16, tauri_path: &PathBuf) -> Result<Client> {
                     "args": [
                         // "--headless",
                         "--incognito",
-                        &format!("--user-data-dir={}\\driver-user-data", tauri_path.display()),
+                        &format!("--user-data-dir={}/driver-user-data", tauri_path.display()),
                     ],
                 }),
             )]
