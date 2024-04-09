@@ -82,6 +82,11 @@ impl<R: Runtime> Fanto<R> {
         })
     }
 
+    pub fn destroy(&self) {
+        let mut process = self.process.lock().unwrap();
+        let _ = process.kill();
+    }
+
     pub async fn driver(&self) -> Result<Client> {
         #[cfg(target_os = "macos")]
         let driver = chrome_client(self.port, &self.app_local_data_dir).await?;
@@ -99,17 +104,6 @@ impl<R: Runtime> Fanto<R> {
             ))
             .await;
         Ok(driver)
-    }
-}
-
-impl<R: Runtime> Drop for Fanto<R> {
-    fn drop(&mut self) {
-        // println!("Fanto dropped!");
-        let mut process = self.process.lock().unwrap();
-        match process.kill() {
-            Err(e) => println!("Could not kill child process: {}", e),
-            Ok(_) => println!("Successfully killed child process"),
-        };
     }
 }
 
