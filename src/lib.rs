@@ -41,13 +41,5 @@ pub fn init<R: Runtime>() -> TauriPlugin<R> {
             app.manage(fanto);
             Ok(())
         })
-        .on_event(|app, event| {
-            if let RunEvent::Exit = event {
-                if let Some(fanto) = app.try_state::<Fanto<R>>() {
-                    #[cfg(desktop)]
-                    fanto.destroy();
-                };
-            }
-        })
         .build()
 }
