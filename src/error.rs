@@ -28,15 +28,18 @@ pub enum Error {
     #[error("Browser is not installed in `{0}`")]
     BrowserNotFound(std::path::PathBuf),
 
-    #[cfg(target_os = "windows")]
-    #[error("MsEdge version not found")]
-    MsEdgeVersionNotFound,
+    #[error("Error fetching version info: {0}")]
+    VersionNotFound(String),
+    #[error("Executable not found at {0}")]
+    ExecutableNotFound(std::path::PathBuf),
     #[cfg(target_os = "windows")]
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),
     #[cfg(target_os = "windows")]
     #[error(transparent)]
     ZipError(#[from] zip::result::ZipError),
+    #[error(transparent)]
+    FromUtf8Error(#[from] std::string::FromUtf8Error),
 }
 
 impl Serialize for Error {

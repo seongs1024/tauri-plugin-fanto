@@ -7,6 +7,7 @@ use std::{
     path::PathBuf,
     process::{Child, Command, Stdio},
     sync::Mutex,
+    fs::{self},
 };
 
 use fantoccini::{wd::TimeoutConfiguration, Client, ClientBuilder};
@@ -112,14 +113,27 @@ async fn dowload_webdriver(tauri_dir: &PathBuf) -> Result<PathBuf> {
     let driver_path = tauri_dir.join("chromedriver");
     #[cfg(target_os = "windows")]
     let driver_path = tauri_dir.join("msedgedriver.exe");
-    if driver_path.is_file() {
-        return Ok(driver_path);
+    if !driver_path.is_file() {
+        #[cfg(target_os = "macos")]
+        dowload_chromedriver(&driver_path).await?;
+        #[cfg(target_os = "windows")]
+        dowload_msedgedriver(&driver_path).await?;
     }
 
     #[cfg(target_os = "macos")]
-    dowload_chromedriver(&driver_path).await?;
+    todo!();
     #[cfg(target_os = "windows")]
-    dowload_msedgedriver(&driver_path).await?;
+    let (driver_version, browser_version) = {(
+        msedgedriver_version(&driver_path)?,
+        msedge_version()?,
+    )};
+
+    if driver_version != browser_version {
+        #[cfg(target_os = "macos")]
+        dowload_chromedriver(&driver_path).await?;
+        #[cfg(target_os = "windows")]
+        dowload_msedgedriver(&driver_path).await?;
+    }
 
     Ok(driver_path)
 }
@@ -148,7 +162,7 @@ async fn dowload_chromedriver(driver_path: &PathBuf) -> Result<()> {
 
 #[cfg(target_os = "windows")]
 async fn dowload_msedgedriver(driver_path: &PathBuf) -> Result<()> {
-    let msedge_version = msedgedriver_version()?;
+    let msedge_version = msedge_version()?;
     let url = format!(
         "https://msedgedriver.azureedge.net/{}/edgedriver_win64.zip",
         msedge_version
@@ -176,24 +190,36 @@ async fn dowload_msedgedriver(driver_path: &PathBuf) -> Result<()> {
 }
 
 #[cfg(target_os = "windows")]
-fn msedgedriver_version() -> Result<String> {
-    std::fs::read_dir("C:\\Program Files (x86)\\Microsoft\\Edge\\Application")?
-        .flat_map(|entry| entry)
-        .filter(|entry| match entry.file_type() {
-            Ok(file_type) => file_type.is_dir(),
-            Err(_) => false,
-        })
-        .filter_map(|entry| match entry.path().file_name() {
-            Some(file_name) => match file_name.to_str() {
-                Some(file_name) => Some(file_name.to_string()),
-                None => None,
-            },
-            None => None,
-        })
-        .filter(|file_name| file_name.chars().all(|c| c.is_ascii_digit() || c == '.'))
-        .take(1)
-        .next()
-        .ok_or(Error::MsEdgeVersionNotFound)
+fn msedge_version() -> Result<String> {
+    let edge_executable = PathBuf::from("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe");
+    check_version(&edge_executable)
+}
+
+#[cfg(target_os = "windows")]
+fn msedgedriver_version(driver_path: &PathBuf) -> Result<String> {
+    check_version(driver_path)
+}
+
+#[cfg(target_os = "windows")]
+fn check_version(executable: &PathBuf) -> Result<String> {
+    if fs::metadata(executable).is_ok() {
+        let output = Command::new("powershell")
+            .arg("-Command")
+            .arg(format!(
+                "(Get-Item '{}').VersionInfo.ProductVersion",
+                executable.to_string_lossy()
+            ))
+            .output()?;
+
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout);
+            Ok(version.trim().to_string())
+        } else {
+            Err(Error::VersionNotFound(String::from_utf8(output.stderr)?))
+        }
+    } else {
+        Err(Error::ExecutableNotFound(executable.to_owned()))
+    }
 }
 
 #[cfg(target_os = "macos")]

@@ -9,7 +9,7 @@
 
 ```toml
 [dependencies]
-tauri-plugin-fanto = "0.1.1"
+tauri-plugin-fanto = "0.2.0"
 ```
 
 ## Usage
